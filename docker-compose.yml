@@ -1,0 +1,69 @@
+version: '3.8'
+
+networks:
+  laravel:
+    driver: bridge
+
+volumes:
+  sqldata:
+    driver: local
+
+services:
+  nginx:
+    build:
+      context: .docker
+      dockerfile: nginx/Dockerfile
+    container_name: nginx
+    ports:
+      - "8080:80"
+      - "9001:9001"
+    volumes:
+      - ./:/var/www/html:delegated
+    depends_on:
+      - php
+    networks:
+      - laravel
+
+  php:
+    build:
+      context: .docker
+      dockerfile: php/Dockerfile
+    container_name: php
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "9000:9000"
+    depends_on:
+      - mssql
+    networks:
+      - laravel
+
+  node:
+    build:
+      context: .docker
+      dockerfile: node/Dockerfile
+    container_name: node
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - php
+    networks:
+      - laravel
+
+  mssql:
+    build:
+      context: .docker
+      dockerfile: mssql/Dockerfile
+    container_name: mssql
+    ports:
+      - '1433:1433'
+    environment:
+      MSSQL_DB: ${DB_DATABASE}
+      MSSQL_PID: "Developer"
+      MSSQL_USER: "SA"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+      ACCEPT_EULA: 1
+    volumes:
+      - sqldata:/var/opt/mssql
+    networks:
+      - laravel
